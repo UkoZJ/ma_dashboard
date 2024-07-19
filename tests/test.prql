@@ -1,0 +1,40 @@
+from reports
+filter lat != null
+derive labels = case [
+(simplified_expert_validation_result == "nosesabe" && expert_validated == 1) => "other",
+(simplified_expert_validation_result == "nosesabe" && expert_validated == 0 && hide == False) => "unknown",
+(simplified_expert_validation_result == "nosesabe" && expert_validated == 0 && hide == True) => "spam",
+simplified_expert_validation_result == "noseparece" => "other_species",
+simplified_expert_validation_result == "conflict" => "other_species",
+simplified_expert_validation_result == "site" => "storm_drain",
+simplified_expert_validation_result == "site#other" => "other_site",
+true => simplified_expert_validation_result,
+]
+derive confidence = case [
+expert_validation_confidence == "none" => 0,
+expert_validation_confidence == 1 => 0.7,
+expert_validation_confidence == 2 => 1.0,
+true => 0,
+]
+derive bite_severity = case [
+bite_count <= 3 => "low",
+bite_count <= 10 => "high",
+bite_count > 10 => "extreme",
+]
+derive storm_drain_type = case [
+storm_drain_status == "storm_drain_water" => "with_water",
+storm_drain_status == "storm_drain_dry" => "dry",
+true => null
+]
+derive {
+    observation_date_utc = s"observation_date::TIMESTAMP",
+    upload_date_utc = s"server_upload_time::TIMESTAMP",
+    validation_date_utc = s"max_last_modified::TIMESTAMP",
+    validated = s"expert_validated::BOOL",
+}
+select !{
+    observation_date, server_upload_time, max_last_modified,
+    expert_validated, simplified_expert_validation_result,
+    storm_drain_status
+    }
+sort observation_date_utc

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Mosquito Alert Dashboard</title>
+    <style>
+        /* Existing CSS styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 1rem;
+            line-height: 1.6;
+            height: 100%;
+        }
+
+        p {
+            padding-bottom: 5px;
+        }
+
+        .wrap {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #212529;
+        }
+
+        .login-form {
+            width: 350px;
+            margin: 0 auto;
+            border: 1px solid #505765;
+            padding: 2rem;
+            background: #2b2f33;
+        }
+
+        .form-input {
+            background: #eeeeee;
+            border: 1px solid #505765;
+            padding: 12px;
+            width: 100%;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+            color: #eeeeee;
+        }
+
+        .form-button {
+            background: #EDB20C;
+            border: 1px solid #ddd;
+            color: #212529;
+            padding: 10px;
+            width: 100%;
+            text-transform: uppercase;
+        }
+
+        .form-button:hover {
+            background: #ed840c;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #eeeeee;
+        }
+
+        .form-footer {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <form class="login-form" action="/login" method="post">
+            <div class="form-header">
+                <h3><img src="./assets/LOGO_MosquitoAlert_dark.png" width="100%"></h3>
+                <p id="data-analytics-dashboard">Data Analytics Dashboard</p>
+            </div>
+            <div class="form-group">
+                <span style="color:rgb(255, 0, 0);font-weight:bold" class="errormessage">{{errormessage}}</span>
+            </div>
+            <p></p>
+            <!--Email Input-->
+            <div class="form-group">
+                <input name="username" type="text" class="form-input" autocapitalize="off" autocorrect="off"
+                    placeholder="username">
+            </div>
+            <!--Password Input-->
+            <div class="form-group">
+                <input name="password" type="password" class="form-input" placeholder="password">
+            </div>
+            <!--Login Button-->
+            <div class="form-group">
+                <button class="form-button" type="submit" id="login-button">Login</button>
+            </div>
+            <div class="form-group"><small>
+                    <p id="visit-us">Visit us on the web <a id="visit-link" href="http://www.mosquitoalert.com/"
+                            style="color:#EDB20C">Mosquito Alert</a></p>
+                </small></div>
+        </form>
+    </div>
+
+    <script>
+        const translations = {
+            en: {
+                dashboard: "Data Analytics Dashboard",
+                usernamePlaceholder: "username",
+                passwordPlaceholder: "password",
+                loginButton: "Login",
+                visitUs: "Visit us on the web ",
+                visitLinkText: "Mosquito Alert"
+            },
+            es: {
+                dashboard: "Panel de Analítica de Datos",
+                usernamePlaceholder: "usuario",
+                passwordPlaceholder: "contraseña",
+                loginButton: "Acceso",
+                visitUs: "Visítanos en la web ",
+                visitLinkText: "Mosquito Alert"
+            }
+        };
+
+        function setLanguage(language) {
+            document.getElementById('data-analytics-dashboard').textContent = translations[language].dashboard;
+            document.querySelector('input[name="username"]').placeholder = translations[language].usernamePlaceholder;
+            document.querySelector('input[name="password"]').placeholder = translations[language].passwordPlaceholder;
+            document.getElementById('login-button').textContent = translations[language].loginButton;
+            document.getElementById('visit-us').childNodes[0].nodeValue = translations[language].visitUs;
+            document.getElementById('visit-link').textContent = translations[language].visitLinkText;
+        }
+
+        // Set the language to use
+        setLanguage('en');
+    </script>
+</body>
+
+</html>

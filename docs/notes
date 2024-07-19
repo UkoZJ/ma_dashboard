@@ -1,0 +1,57 @@
+# MA user analysis
+
+Dimensions available for time-space exploration are:
+
+FREQ = day, year-week, month, year
+SCALE = gadm levels from 0 to 4, climate, biome, ecoregions
+REPORT_TYPE = adult, bite, site
+ENTITY = Total, *name of entity relative to SCALE*
+
+## Global level
+
+### User Retention (time series)
+Percentage of users retained over a given interval of time. A valid user interaction is when a report is send. MA app installation is not considered a valid interaction.
+
+Dimensions: scale, entity, freq, report_type
+Parameters: retention_interval
+
+### New users (time series)
+Number of users that download and register the MA application. The location of this event is unknown and thus it's not possible to explore the *scale* dimension.
+
+Dimensions: freq
+
+### Active users (time series)
+Dimensions: freq
+Parameters: retention_interval
+
+### Human-Sensor coverage (time series)
+Percentage of user coverage It accounts for presence-absence of user on a given cell for a given time period (i.e. *freq*), but it does not account for the total or corrected number of users in a cell as the measure of *sampling effort*. It provides coverage for four categories of human density: urban cluster, rural cluster, rural low density and human absence.
+
+Dimensions: scale, entity, freq
+
+## UUID level
+
+### Point Pattern Analysis (static)
+For each user we compute dispersion statistics and clustering based on the relative geo-location of reports. Clustering is performed only for users with a given number of reports (+10). For users with only one report, no statistics are given. Clustering is performed after re-projection over the appropriate UTM zone.
+
+Dimensions: scale, entity, report_type
+Parameters: min_samples
+Output statistics:
+- n_points: validated and non-validated reports (bites, adult, sites)
+- n_invalid_points: not valid points in relation to UTM zone
+mean_latlon: mean geo-location
+- std_utm msd_utm: std in UTM (meters) of all reports
+- n_random_points: random points that are not part of any cluster
+- n_clusters: number of clusters
+- major_medoid_id: index of the biggest medoid
+- medoids_lonlat: medoids of clusters
+- name_gadm_level0: country name relative to the estimated origin of the user
+- n_reports: validated mosquito reports used to estimate the quality measures
+- quality_target: number of target-mosquito reports divided by the total number of mosquito reports send by a user
+- quality_reports: cum-sum of expert confidence for target-mosquito reports divided by the total number of mosquito reports send by a user
+
+
+### Image quality assessment (IQA)
+Estimation by means of CNN of photographic quality of photos. It does not assess the information quality relative to the classification task, but rather the sharpness, contrast, etc. I ran the AI over *best photo* relative to a given report of *adult* mosquito.
+
+

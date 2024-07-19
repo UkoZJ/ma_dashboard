@@ -1,0 +1,32 @@
+# Bootstrap Makefile
+
+REPO_URL_MA := https://github.com/Mosquito-Alert/ma_dashboard.git
+REPO_DEST := $(CURDIR)/ma_dashboard
+
+
+.PHONY: setup install-deps clone-repo run-setup
+
+setup: install-deps clone-repo run-setup
+
+install-deps:
+	@echo "Installing dependencies..."
+	@if ! command -v git > /dev/null; then \
+		echo "git not found. Installing git..."; \
+		sudo apt-get update && sudo apt-get install -y git || \
+		(echo "Unable to install git. Please install manually."; exit 1); \
+	fi
+	@if ! command -v git-lfs > /dev/null; then \
+		echo "git-lfs not found. Installing git-lfs..."; \
+		sudo apt-get update && sudo apt-get install -y git-lfs || \
+		(echo "Unable to install git-lfs. Please install manually."; exit 1); \
+	fi
+	@git lfs install
+
+clone-repo: 
+	@echo "Cloning repository..."
+	@git lfs clone $(REPO_URL_MA) $(REPO_DEST) || (echo "Failed to clone repository"; exit 1)
+
+
+run-setup: 
+	@echo "Running setup from the cloned repository..."
+	@cd $(REPO_DEST) && make setup || (echo "Failed to run setup"; exit 1)
