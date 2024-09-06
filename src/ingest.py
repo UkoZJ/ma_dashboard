@@ -1,5 +1,6 @@
 import os
-import urllib.parse
+import subprocess
+from urllib.parse import urlparse, quote_plus
 from configparser import ConfigParser
 from functools import partial
 from typing import Callable, Dict, Literal, Optional, Tuple, Any
@@ -34,7 +35,7 @@ prql2sql_duckdb = partial(
 
 
 def open_conn(
-    cfg: ConfigParser,
+    config: ConfigParser,
     conn_type: CONN_MODE = "local",
     sql_engine: SQL_ENGINE = "duckdb",
     logger: Optional[Logger] = None,
@@ -43,87 +44,105 @@ def open_conn(
     Open connection with the DB
     """
 
-    def log_info(message: str):
-        if isinstance(logger, Logger):
-            logger.info(message)
-
-    def log_error(message: str):
-        if isinstance(logger, Logger):
-            logger.error(message)
-
     def create_uri(user: str, password: str, host: str, port: int, dbname: str) -> str:
-        encoded_password = urllib.parse.quote_plus(password)
+        encoded_password = quote_plus(password)
         return f"postgresql://{user}:{encoded_password}@{host}:{port}/{dbname}"
 
-    def create_engine_conn(uri: str, engine_type: str) -> Any:
+    def set_postgres_env(uri:str):
+        """Setup postgres environment variables to start a DuckDB connection"""
+
+        parsed = urlparse(uri)
+        env_vars = {
+            'PGUSER': parsed.username,
+            'PGPASSWORD': parsed.password,
+            'PGHOST': parsed.hostname,
+            'PGPORT': str(parsed.port),
+            'PGDATABASE': parsed.path[1:]
+        }
+        os.environ.update(env_vars)
+        export_commands = [f"export {key}={value}" for key, value in env_vars.items()]
+        command_string = "; ".join(export_commands)
+        subprocess.run(command_string, shell=True, executable="/bin/bash")
+
+    def create_engine_conn(
+        uri: str, engine_type: str, is_env:bool=True) -> Any:
         if engine_type == "sqlalchemy":
-            return create_engine(uri, echo=False)
+            return create_engine(uri, echo=False, hide_parameters=True)
         elif engine_type == "duckdb":
             engine = duckdb.connect()
-            engine.execute(f"ATTACH '{uri}' AS db (TYPE postgres, READ_ONLY);")
+            if is_env:
+                set_postgres_env(uri)
+                engine.execute(f"ATTACH '' AS db (TYPE postgres, READ_ONLY);")
+            else:
+                engine.execute(f"ATTACH '{uri}' AS db (TYPE postgres, READ_ONLY);")
             return engine
         else:
             raise ValueError(f"Unsupported SQL engine: {engine_type}")
 
     if conn_type == "remote":
         try:
-            log_info("Connecting to the remote DB...")
+            if logger:
+                logger.info("Connecting to the remote DB...")
 
             server = SSHTunnelForwarder(
-                (cfg["ssh"]["HOST"], cfg["ssh"].getint("PORT")),
-                ssh_username=cfg["ssh"]["USER"],
-                ssh_password=cfg["ssh"]["PASSWORD"],
+                (config["ssh"]["HOST"], config["ssh"].getint("PORT")),
+                ssh_username=config["ssh"]["USER"],
+                ssh_password=config["ssh"]["PASSWORD"],
                 local_bind_address=(
-                    cfg["ssh"]["LOCAL_HOST"],
-                    cfg["ssh"].getint("LOCAL_PORT"),
+                    config["ssh"]["LOCAL_HOST"],
+                    config["ssh"].getint("LOCAL_PORT"),
                 ),
                 remote_bind_address=(
-                    cfg["remote_db"]["HOST"],
-                    cfg["remote_db"].getint("PORT"),
+                    config["remote_db"]["HOST"],
+                    config["remote_db"].getint("PORT"),
                 ),
             )
 
             server.start()
-            log_info("SSH tunnel established.")
+            if logger:
+                logger.info("SSH tunnel established.")
 
             uri = create_uri(
-                cfg["remote_db"]["USER"],
-                cfg["remote_db"]["PASSWORD"],
-                server.local_bind_host,
-                server.local_bind_port,
-                cfg["remote_db"]["NAME"],
+                config["remote_db"]["USER"],
+                config["remote_db"]["PASSWORD"],
+                config["ssh"]["LOCAL_HOST"],
+                config["ssh"].getint("LOCAL_PORT"),
+                config["remote_db"]["NAME"],
             )
 
             engine = create_engine_conn(uri, sql_engine)
-            log_info("Connected to the remote DB successfully.")
+            logger.info("Connected to the remote DB successfully.")
 
             return engine, server
 
         except Exception as e:
-            log_error(f"Connection to remote DB has failed! Error: {e}")
+            if logger:
+                logger.error(f"Connection to remote DB has failed! Error: {e}")
             if server:
                 server.close()
             raise
 
     elif conn_type == "local":
         try:
-            log_info("Connecting to local DB...")
+            if logger:
+                logger.info("Connecting to local DB...")
 
             uri = create_uri(
-                cfg["local_db"]["USER"],
-                cfg["local_db"]["PASSWORD"],
-                cfg["local_db"]["HOST"],
-                cfg["local_db"].getint("PORT"),
-                cfg["local_db"]["NAME"],
+                config["local_db"]["USER"],
+                config["local_db"]["PASSWORD"],
+                config["local_db"]["HOST"],
+                config["local_db"].getint("PORT"),
+                config["local_db"]["NAME"],
             )
 
             engine = create_engine_conn(uri, sql_engine)
-            log_info("Connected to the local DB successfully.")
+            if logger:
+                logger.info("Connected to the local DB successfully.")
 
             return engine, None
 
         except Exception as e:
-            log_error(f"Connection to local DB has failed! Error: {e}")
+            logger.error(f"Connection to local DB has failed! Error: {e}")
             raise
 
     else:
@@ -166,7 +185,7 @@ class Ingest:
         """
 
         # Open connection with postgres
-        engine, server = open_conn(self.config, conn_type, sql_engine)
+        engine, server = open_conn(self.config, conn_type, sql_engine, logger=self.logger)
         is_prql = self.config.getboolean("params", "is_prql")
         try:
             # Get all the tables relative to their query
@@ -202,7 +221,6 @@ class Ingest:
     def transform(
         self, refresh_static_tables: bool = False, refresh_codes: bool = True
     ) -> None:
-
         legends_exist = os.path.isfile(
             self.config["paths"]["gadm_legend"]
         ) and os.path.isfile(self.config["paths"]["ecoregions_legend"])
@@ -231,14 +249,15 @@ class Ingest:
         # Filter out spam and inconsistent reports
         prql_raw = """
             from reports
-            filter (lat != null && hide == false)
+            filter (lat != null)
             derive labels = case [
-            (simplified_expert_validation_result == "nosesabe" && expert_validated == 1) => "other",
-            (simplified_expert_validation_result == "nosesabe" && expert_validated == 0) => "unknown",
-            simplified_expert_validation_result == "noseparece" => "other_species",
-            simplified_expert_validation_result == "conflict" => "other_species",
-            simplified_expert_validation_result == "site" => "storm_drain",
-            simplified_expert_validation_result == "site#other" => "other_site",
+            (simplified_expert_validation_result == "nosesabe" && expert_validated == 1 && hide == false) => "not-sure",
+            (simplified_expert_validation_result == "nosesabe" && expert_validated == 0 && hide == false) => "unvalidated",
+            (simplified_expert_validation_result == "noseparece" && hide == false) => "other_species",
+            (simplified_expert_validation_result == "conflict" && hide == false) => "other_species",
+            (simplified_expert_validation_result == "site" && hide == false) => "storm_drain",
+            (simplified_expert_validation_result == "site#other" && hide == false) => "other_site",
+            hide == true => "spam",
             true => simplified_expert_validation_result,
             ]
             derive confidence = case [
@@ -543,7 +562,6 @@ class Ingest:
             self.logger.info("Completed: sampling_effort_transf")
 
     def transform_reports_response(self):
-
         reports_response = duckdb.from_parquet(self.config["paths"]["reports_response"])
 
         sql = """

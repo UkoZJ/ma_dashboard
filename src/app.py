@@ -16,10 +16,7 @@ import src.viz as viz
 from src.utils import get_config
 
 # Color-code for adults, bites and sites provided by Enric (white theme)
-COLOR_ECHARTS = ["#DFD458", # adult
-                 "#D28A73", # bite
-                 "#7D9393"  # site
-                ]
+# COLOR_ECHARTS = ["#DFD458", "#D28A73", "#7D9393"]
 
 # Adjusted color-code for black theme
 HEADER_COLOR = "#EDB20C"
@@ -271,7 +268,10 @@ class MosquitoAlertExplorer(param.Parameterized):
             entity=self.entity,
             report_type=report_type,
         )
-        df = df_pv[self.report_type_legend[report_type]]
+        df = pd.DataFrame(
+            columns=self.report_type_legend[report_type], index=df_pv.index
+        )
+        df[df_pv.columns] = df_pv
         filter_labels_pie = ECharts(
             renderer="svg",
             name="Raw Data",
@@ -294,7 +294,10 @@ class MosquitoAlertExplorer(param.Parameterized):
             entity=self.entity,
         )
 
-        df = df_pv[self.report_type_legend[report_type]]
+        df = pd.DataFrame(
+            columns=self.report_type_legend[report_type], index=df_pv.index
+        )
+        df[df_pv.columns] = df_pv
         df = df.infer_objects(copy=False).fillna(0)
         # self.filt_raw_data = df
         self.filt_raw_data = df_pv  # without empty columns

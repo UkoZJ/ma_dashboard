@@ -38,3 +38,5 @@ try:
 
 except Exception as exc:
     logger_alert.error(f"Data ingestion terminated with error: {exc}")
+
+# %%

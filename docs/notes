@@ -16,7 +16,7 @@ Dimensions: scale, entity, freq, report_type
 Parameters: retention_interval
 
 ### New users (time series)
-Number of users that download and register the MA application. The location of this event is unknown and thus it's not possible to explore the *scale* dimension.
+Number of users that download and register the MA application. The location of this event is unvalidated and thus it's not possible to explore the *scale* dimension.
 
 Dimensions: freq
 

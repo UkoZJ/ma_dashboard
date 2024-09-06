@@ -103,6 +103,7 @@ def raw_data(
     },
     ylabel: str = "",
     ymax: Optional[float] = None,
+    color: Optional[List[str]] = None,
 ):
     """Plot of raw data of MA"""
 
@@ -123,7 +124,7 @@ def raw_data(
         cols = sorted(df.columns)
     else:
         cols = df.columns
-    color = make_color_palette(cols)
+    # color = make_color_palette(cols)
     colsLabel = [_(col_name.capitalize().replace("_", " ")) for col_name in cols]
     series = []
     for i, col in enumerate(cols):
@@ -174,7 +175,7 @@ def raw_data(
     echart = {
         "backgroundColor": backgroundColor,
         "title": set_title,
-        # "color": color,
+        "color": color,
         "toolbox": {
             "right": "15%",
             "feature": {
@@ -237,7 +238,7 @@ def raw_data(
     return echart
 
 
-def raw_data_labels(df, lang="es", halfpie=False):
+def raw_data_labels(df, lang="es", color:Optional[List[str]]=None):
     # Text Translation
     t = gettext.translation(
         lang, localedir="translations", languages=[lang], fallback=True
@@ -245,9 +246,8 @@ def raw_data_labels(df, lang="es", halfpie=False):
     _ = t.gettext
 
     # Plot setup
-    # cols = sorted(df.columns)
     cols = df.columns
-    color = make_color_palette(cols)
+    # color = make_color_palette(cols)
     colsLabel = [
         f'{_(col_name.capitalize().replace("_", " "))} ({df.loc["perc_ct", col_name]:0.1f}%)'
         for col_name in cols
@@ -260,18 +260,9 @@ def raw_data_labels(df, lang="es", halfpie=False):
             {
                 "value": df.loc["ct", col],
                 "name": colsLabel[i],
-                # "itemStyle": {"color": color[i]},
+                "itemStyle": {"color": color[i]},
             }
         )
-    if halfpie:
-        data.append(
-            {
-                "value": df.loc["ct", :].sum(),
-                "itemStyle": {"color": "none", "decal": {"symbol": "none"}},
-                "label": {"show": False},
-            }
-        )
-
     echart = {
         "tooltip": {"trigger": "item"},
         "series": [
@@ -338,7 +329,7 @@ def overview_time2finish(
     cols_delay = ["median", "perc25", "iqr"]
 
     # Plot setup
-    colsLabel = [_("Delay (days)"), _("Accumulation")]
+    colsLabel = [_("Delay (days)"), _("Unvalidated")]
     ciLabel = [_("Median"), _("Q1"), _("IQR")]
 
     # Select variables (columns) to visualize

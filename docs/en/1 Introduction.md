@@ -22,13 +22,13 @@ This dashboard visualizes Mosquito Alert (MA) reports, monitoring performance, c
 
 <h2 style="font-size:14px"> Visualization Views </h2>
 
-* **Overview**: Displays total report counts for the main report types of MA and citizen participation. Counts related to mosquitoes are grouped by spatial scale and presented in a table.
+* **Overview**: This view presents comprehensive statistics on key report categories, including MA reports (adult species, mosquito bites, and breeding sites) and citizen engagement metrics (new and active users). Mosquito-related data are aggregated by geographic scale and displayed in a tabular format. Users can sort rows and apply filters using a minimum threshold value to customize the data view.
 * **KPIs**: Presents key performance indexes to monitor data flow, monitoring performance, user retention, and sampling coverage of the MA system.
-* **Filter**: Allows detailed exploration of mosquito-related reports.
+* **Report Stats**: Allows detailed exploration of mosquito-related reports.
 
 <h2 style="font-size:14px"> Filter Parameters </h2>
 
-The **Filter Parameters** control panel, located on the left side of the display, affects all views simultaneously. This panel allows filtering data by different spatial scales and time windows (from daily to yearly). 
+The **Parameters** control panel, located on the left side of the display, affects all views simultaneously. This panel allows filtering data by different spatial scales and time windows (from daily to yearly). 
 
 * **Scale**: Sets the spatial scale over which to filter within the *Entity* parameter. There are four available scale types: [*GADM Levels*](https://gadm.org) that aims at mapping the administrative areas of all countries, at all levels of sub-division, [Köppen–Geiger's *Climatic Regions*](https://www.nature.com/articles/sdata2018214), *Biome* which classifies 14 distinct geographical region with specific climate, vegetation, and animal life and the [WWF's *Eco-regions*](https://www.worldwildlife.org/publications/terrestrial-ecoregions-of-the-world) that represent the original distribution of distinct assemblages of species and communities. Changing the *Scale* parameter directly affects the **Overview** table.
 * **Entity**: Specify a geographic entity relative to the selected scale (default is `Total`, meaning all data are considered). In case *GADM Levels* are selected, administrative names are separated by a vertical pipe symbol. For example in case of GADM level 2 for `Barcelona | Cataluña | Spain`, `Barcelona` is a province (level 2), `Cataluña` is an autonomy (level 1) and `Spain` is a country name (level 0).

@@ -21,9 +21,9 @@ $$SD = \sqrt{\frac{ \sum_{i=1}^{n} (x_i - x_m)^2 }{n} + \frac{ \sum_{i=1}^{n} (y
 
 ### Report Clusters
 
-In point pattern analysis (PPA), three major types of point patterns are recognized: regular, random, and clustered. Regular patterns are excluded from our analysis, as it is assumed that MA participants do not report in a highly organized and systematic manner. We utilize DBSCAN ( Density-Based Spatial Clustering of Applications with Noise), a density-based, to identify clusters among user's report-points. DBSCAN determines the optimal number of clusters and identifies outliers or noise points. If all points are classified as noisy, the sample reflects a random point pattern, suggesting a *Sparse* user reporting behavior. Conversely, if a minority of points are identified as outliers, the sampling behavior is categorized as *Clustered* or *Multi-Clustered*. 
+In point pattern analysis (PPA), three major types of point patterns are recognized: regular, random, and clustered. Regular patterns are excluded from our analysis, as it is assumed that MA participants do not report in a highly organized and systematic manner. We utilize DBSCAN ( Density-Based Spatial Clustering of Applications with Noise), a density-based classifier, to identify clusters among user's report-points. DBSCAN determines the optimal number of clusters and identifies outliers or noise points. If all points are classified as noisy, the sample reflects a random point pattern, suggesting a *Sparse* user reporting behavior. Conversely, if a minority of points are identified as outliers, the sampling behavior is categorized as *Clustered* or *Multi-Clustered*. 
 
-Clustering analysis is restricted to users who have contributed at least 10 reports, as smaller sample sizes are considered statistically unreliable. In our application of DBSCAN, the algorithm is configured with a minimum of 10 points in a neighborhood for a point to be considered a core point, and the maximum distance between two points for one to be considered in the neighborhood of the other ($\epsilon$) is fixed at 100 meters.
+Clustering analysis is restricted to users who have contributed at least 5 reports, as smaller sample sizes are considered statistically unreliable. In our application of DBSCAN, the algorithm is configured with a minimum of 5 points in a neighborhood for a point to be considered a core point, and the maximum distance between two points for one to be considered in the neighborhood of the not-sure ($\epsilon$) is fixed at 100 meters.
 
 ### User Quality
 
@@ -56,7 +56,7 @@ Furthermore, reports on adult mosquitoes allow users to annotate visible taxonom
 
 Below is the decision diagram used to construct behavioral archetype labels based on feature vectors at different levels of description:
 
-* **Level 1**: This level considers the spatial clustering of reports. If a user has contributed more than 10 reports, their reporting behavior can be labeled as *Sparse* if the reports are randomly distributed, *Clustered* if the reports are densely aggregated in a single location, or *Multi-Clustered* if the reports are densely aggregated in multiple locations.
+* **Level 1**: This level considers the spatial clustering of reports. If a user has contributed more than 5 reports, their reporting behavior can be labeled as *Sparse* if the reports are randomly distributed, *Clustered* if the reports are densely aggregated in a single location, or *Multi-Clustered* if the reports are densely aggregated in multiple locations.
 
 * **Level 2**: This level adds a quality dimension to the labels from *Level 1*. A user is labeled as either *High Quality* or *Low Quality* based on whether the UQ index is above or below a threshold value of 0.67.
 

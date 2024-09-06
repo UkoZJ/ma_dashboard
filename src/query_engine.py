@@ -20,7 +20,7 @@ FREQ_MAP = {
     "quarter": "QS",
     "year": "YS",
 }
-FREQ = Literal["day", "yearweek", "month", "year"]
+FREQ = Literal["day", "yearweek", "month", "quarter", "year"]
 SCALE = Literal[
     "name_gadm_level0",
     "name_gadm_level1",
@@ -351,6 +351,62 @@ class QueryEngine:
         else:
             return pd.DataFrame()
 
+    def user_activity_rank(
+        self,
+        retention_interval: str = "1 year",
+        scale: SCALE = "name_gadm_level0",
+    ):
+        reports = self.reports
+        reports_codes = self.reports_codes
+        app_users = self.app_users
+
+        sql = f"""
+        with
+        reports_codes_scale as (
+            select version_uuid, {scale}
+            from reports_codes
+            where {scale} <> 'NULL'
+        ),
+        tar_users_with_report as (
+            select user_id, {scale}, count(*) report_count, max(upload_date_utc) last_user_upload_utc
+            from reports
+            right join reports_codes_scale using(version_UUID)
+            group by user_id, {scale}
+        ),
+        new_users as (
+            select {scale}, count(*) ct_new_users
+            from tar_users_with_report
+            group by {scale}
+        ),
+        active_users as (
+            select {scale}, count(*) ct_active_users
+            from tar_users_with_report
+            where last_user_upload_utc >= (NOW()::TIMESTAMP - interval '{retention_interval}') 
+            group by {scale}
+        ),
+        final as (
+        select * from new_users
+        left join active_users using({scale})
+        order by ct_new_users desc
+        )
+        select * from final
+        """
+        df = (
+            duckdb.sql(sql)
+            .to_df()
+            .set_index(scale)
+            .rename(
+                columns={
+                    "ct_active_users": "active",
+                    "ct_new_users": "new",
+                    "ct_registered_users": "registered",
+                }
+            )
+        )
+        df = df.fillna(0)
+        
+        return df
+
     def user_activity(
         self,
         freq: FREQ = "month",
@@ -365,10 +421,15 @@ class QueryEngine:
 
         sql = f"""
         with
+        reports_codes_scale as (
+            select version_uuid, {scale}
+            from reports_codes
+            where {scale} <> 'NULL'
+        ),
         tar as (
             select user_id, count(*) report_count, max(upload_date_utc) last_user_upload_utc
             from reports
-            left join reports_codes using(version_UUID)
+            right join reports_codes_scale using(version_UUID)
             {filt}
             group by user_id 
         ),
@@ -382,7 +443,7 @@ class QueryEngine:
             group by date_base
         ),
         tar_users_with_report as (
-            select user_id, report_count, registration_time_utc, last_user_upload_utc
+            select user_id, registration_time_utc, last_user_upload_utc
             from app_users au
             right join tar on tar.user_id = au."user_UUID" 
         ),
@@ -593,7 +654,7 @@ class QueryEngine:
             )
             let reports_ = (
                 from reports
-                filter (report_type == "adult" && labels != "other" && labels != "unknown")
+                filter (report_type == "adult" && labels != "not-sure" && labels != "unvalidated")
             )
             let final = (
                 from reports_

@@ -16,7 +16,9 @@ logging_loki.emitter.LokiEmitter.level_tag = (
     "level"  # assign to a variable named handler
 )
 
-HOST = f"{os.getlogin()}@{socket.gethostname()}"
+#HOST = f"{os.getlogin()}@{socket.gethostname()}"
+HOST = f"zivko@hemalert"
+
 
 
 def get_logger(config: ConfigParser, name: str, email_alert: bool = False):
