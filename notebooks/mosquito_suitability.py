@@ -80,6 +80,7 @@ def R0_func(species, Te, rain, hum):
     R0 = ((f * a * deltaa) * probla * ((h * dE) / (h * dE + deltaE))) ** (1.0 / 3.0)
     return R0
 
+
 # Example usage of R0_func
 
 # Define temperature, rainfall, and human density
@@ -97,9 +98,11 @@ print(f"Suitability index for Aedes aegypti: {R0_aegypti}")
 
 # %%
 
+
 # Sigmoid function
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
+
 
 # Smooth function P
 def decision_index(MSI, RD, r, k):
@@ -107,6 +110,7 @@ def decision_index(MSI, RD, r, k):
     S_RD = sigmoid(-k * (RD - r))
     P = S_MSI * S_RD + 0.5 * (1 - S_MSI) * S_RD
     return P
+
 
 # Parameters
 r = 0.5
@@ -121,11 +125,11 @@ P_grid = decision_index(MSI_grid, RD_grid, r, k)
 
 # Plotting the results
 plt.figure(figsize=(10, 8))
-cp = plt.contourf(MSI_grid, RD_grid, P_grid, levels=50, cmap='viridis')
+cp = plt.contourf(MSI_grid, RD_grid, P_grid, levels=50, cmap="viridis")
 plt.colorbar(cp)
-plt.xlabel('MSI')
-plt.ylabel('RD')
-plt.title('Smooth Decision Index P')
+plt.xlabel("MSI")
+plt.ylabel("RD")
+plt.title("Smooth Decision Index P")
 plt.show()
 
 # %%
@@ -145,7 +149,7 @@ mask.coords["longitude"] = mask.coords["longitude"].values - 180
 # %%
 # ds.t2m[0].plot()
 
-(mask.mask_land*ds.t2m[0]).plot()
+(mask.mask_land * ds.t2m[0]).plot()
 
 # %%
 resolution = 3
@@ -181,17 +185,17 @@ bbox
 bbox_coords
 # %%
 geo = {
-        'type': 'Polygon',
-        'coordinates': [
-            [
-    (lon_min, lat_min),
-    (lon_min, lat_max),
-    (lon_max, lat_max),
-    (lon_max, lat_min),
-    (lon_min, lat_min),
-            ]
+    "type": "Polygon",
+    "coordinates": [
+        [
+            (lon_min, lat_min),
+            (lon_min, lat_max),
+            (lon_max, lat_max),
+            (lon_max, lat_min),
+            (lon_min, lat_min),
         ]
-    }
+    ],
+}
 idx = h3.polyfill(geo, resolution, geo_json_conformant=False)
 ll_points = np.array([h3.h3_to_geo(i) for i in idx])
 ll_points_lon_first = ll_points[:, ::-1]
@@ -224,7 +228,12 @@ dsi2
 import matplotlib.pyplot as plt
 
 ds.t2m[0].plot()
-plt.scatter(ll_points_lon_first[:,0]-180, ll_points_lon_first[:,1]+90, cmap='cool', edgecolor='black')
+plt.scatter(
+    ll_points_lon_first[:, 0] - 180,
+    ll_points_lon_first[:, 1] + 90,
+    cmap="cool",
+    edgecolor="black",
+)
 
 # %%
 import numpy as np
@@ -232,7 +241,7 @@ import xarray as xr
 import xesmf as xe
 
 # Open the dataset
-ds = xr.open_dataset('../data/01_raw/era5/temperature_2m_p01_t_2023.nc')
+ds = xr.open_dataset("../data/01_raw/era5/temperature_2m_p01_t_2023.nc")
 
 ds_target_grid = xr.Dataset(
     {
@@ -247,31 +256,32 @@ regridder = xe.Regridder(ds, ds_target_grid, "nearest_s2d", periodic=True)
 ds_regridded = regridder(ds["t2m"], keep_attrs=True)
 
 # %%
-ds_p25 = xr.open_dataset('../data/01_raw/era5/temperature_2m_t_2023.nc')
+ds_p25 = xr.open_dataset("../data/01_raw/era5/temperature_2m_t_2023.nc")
 (ds_p25.isel(time=0)["t2m"] - ds_regridded.isel(time=0)).plot()
 
 # %%
 from utility import mask_from_vect
 
 mask_da = mask_from_vect(
-    vect_path = "/home/uko/Dev/research_datasets/costline/costline_buffer.gpkg",
-    ref_path = "../data/01_raw/era5/temperature_2m_t_2023.nc")
-mask_da.to_netcdf('./data/land_sea_mask.nc')
+    vect_path="/home/uko/Dev/research_datasets/costline/costline_buffer.gpkg",
+    ref_path="../data/01_raw/era5/temperature_2m_t_2023.nc",
+)
+mask_da.to_netcdf("./data/land_sea_mask.nc")
 
 # %%
 from utility import interpolate_mask
 
 # Load your xarray dataset
-ds = xr.open_dataset('path_to_your_dataset.nc')
+ds = xr.open_dataset("path_to_your_dataset.nc")
 
 # Assuming your variable of interest is named 'variable'
-interpolated_da = interpolate_mask(ds['variable'], buffer_size=5)
+interpolated_da = interpolate_mask(ds["variable"], buffer_size=5)
 
 # Replace the original variable with the interpolated one
-ds['variable'] = interpolated_da
+ds["variable"] = interpolated_da
 
 # Save the result
-ds.to_netcdf('path_to_output.nc')
+ds.to_netcdf("path_to_output.nc")
 
 # %%
 
@@ -285,31 +295,50 @@ import pandas as pd
 
 ds = xr.load_dataset("../data/01_raw/era5/temperature_2m_t_2023.nc")
 reports = pd.read_parquet("../data/02_intermediate/reports.parquet")
-land_mask = gpd.GeoDataFrame(geometry=gpd.read_file("../data/01_raw/costline/costline_buffer.gpkg").geometry, crs="EPSG:4326")
+land_mask = gpd.GeoDataFrame(
+    geometry=gpd.read_file("../data/01_raw/costline/costline_buffer.gpkg").geometry,
+    crs="EPSG:4326",
+)
 regs = gpd.read_file("../data/01_raw/costline/ne_50m_coastline.json")
-# %%
-cell_size=0.1
-land_mask_buffer = gpd.GeoDataFrame(geometry=land_mask.to_crs("epsg:3857").buffer(distance=cell_size/2).to_crs(4326))
-# %%
-grid = ut.make_grid(cell_size=cell_size, save_grid = "../data/01_raw/era5/grid.parquet", vec_mask=land_mask_buffer)
 
-# grid = gpd.read_parquet("../data/01_raw/era5/grid.parquet")
+# %%
+cell_size = 0.1
+land_mask_buffer = gpd.GeoDataFrame(
+    geometry=land_mask.to_crs("epsg:3857").buffer(distance=cell_size / 2).to_crs(4326)
+)
+# grid = ut.make_grid(
+#     cell_size=cell_size,
+#     save_grid="../data/01_raw/era5/grid.parquet",
+#     vec_mask=land_mask_buffer,
+# )
 
-points_ct = ut.count_points_on_grid(reports[["lat","lon"]], grid)
+grid = gpd.read_parquet("../data/01_raw/era5/grid.parquet")
+
+points_ct = ut.count_points_on_grid(reports[["lat", "lon"]], grid)
 grid["point_ct"] = points_ct
-grid["point_density"] = grid["point_ct"]/(grid["area"]/1e6)
+grid["point_density"] = grid["point_ct"] / (grid["area"] / 1e6)
 
 # %%
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-fig, ax = plt.subplots()
-grid.cx[-10:5,35:45].plot(column="point_density", 
-                          missing_kwds={'color': 'lightgrey'},
-                          norm=mpl.colors.LogNorm(),
-                          legend=True,
-                          ax=ax)
-regs.plot(edgecolor="k", facecolor="none",ax=ax)
-land_mask_buffer.plot(edgecolor="gray", facecolor="none",ax=ax)
 
-ax.set_ylim(35,45)
-ax.set_xlim(-10,5)
+fig, ax = plt.subplots()
+grid.cx[-10:5, 35:45].plot(
+    column="point_density",
+    missing_kwds={"color": "lightgrey"},
+    norm=mpl.colors.LogNorm(),
+    legend=True,
+    ax=ax,
+)
+regs.plot(edgecolor="k", facecolor="none", ax=ax)
+land_mask_buffer.plot(edgecolor="gray", facecolor="none", ax=ax)
+
+ax.set_ylim(35, 45)
+ax.set_xlim(-10, 5)
+
+# %%
+import xvec
+gs = gpd.GeoSeries(grid["centroids"], crs=4326)
+extracted = ds.xvec.extract_points(gs, x_coords="longitude", y_coords="latitude")
+gdf = extracted["t2m"].isel(time=0).xvec.to_geodataframe()
+# %%

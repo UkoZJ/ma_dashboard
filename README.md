@@ -74,3 +74,7 @@ In order to access the dashboard, it is necessary to register the users and thei
     "admin": "admin_password"
 }
 ```
+
+### Data
+
+`Data` folder is available on the Google Drive of `mosquitoalert2share@gmail.com` with link `https://drive.google.com/drive/u/1/folders/16kg55tSuqSrNxNaSMeYjeSIllB7M0IMK` and path 'My Drive > Private > ma_dashboard > `data.zip`.

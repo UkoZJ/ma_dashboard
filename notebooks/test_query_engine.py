@@ -28,7 +28,7 @@ qe = QueryEngine(config)
 # %%
 freq = "month"
 df_pv = qe.filter_view(
-    freq=freq, scale="name_gadm_level0", report_type="adult", entity="Total"
+    freq=freq, scale="name_gadm_level0", report_type="adult", entity="Spain"
 )
 df_pv.plot(kind="area", stacked=True)
 df_pv
