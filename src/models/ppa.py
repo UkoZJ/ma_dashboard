@@ -1,7 +1,7 @@
 import warnings
 import os
 from functools import partial
-from typing import List, Literal, Optional, Tuple, Union
+from typing import List, Literal, Optional, Tuple, Union, Dict, Callable, Any
 from configparser import ConfigParser
 import logging
 
@@ -71,7 +71,6 @@ def point_pattern_analysis(
     method: Literal["dbscan", "hdbscan", "optics"] = "optics",
     plot_fig: bool = False,
 ) -> dict:
-
     import warnings
 
     import geopandas as gpd
@@ -306,12 +305,25 @@ class QueryEngine:
 
     def get_users_ppa(
         self,
-        freq="month",
+        freq: Literal["month", "week", "day"] = "month",
         report_type: str = "",
         min_samples: int = 5,
-        method: str = "optics",
+        method: Literal["optics", "dbscan", "hdbscan"] = "optics",
         max_workers: int = 7,
     ):
+        """
+        Perform point pattern analysis for users and save the results.
+
+        Args:
+            freq (Literal["month", "week", "day"]): Frequency for date grouping.
+            report_type (str): Type of report to filter, if any.
+            min_samples (int): Minimum number of samples for clustering.
+            method (Literal["optics", "dbscan", "hdbscan"]): Clustering method to use.
+            max_workers (int): Maximum number of parallel workers.
+
+        Returns:
+            None
+        """
         from concurrent.futures import ProcessPoolExecutor
 
         reports = self.reports
@@ -369,8 +381,16 @@ class QueryEngine:
         users_ppa.to_parquet(self.config["paths"]["users_ppa"])
         logger.info("Completed: users_ppa")
 
-    def get_users_quality(self, report_type=None):
+    def get_users_quality(self, report_type: Optional[str] = None):
+        """
+        Calculate and save user quality metrics.
 
+        Args:
+            report_type (Optional[str]): Type of report to filter, if any.
+
+        Returns:
+            None
+        """
         reports = self.reports
         reports_codes = self.reports_codes
 
@@ -441,7 +461,15 @@ class QueryEngine:
 
     @task_logging(logger=logger)
     def run_ppa(self, refresh_users_ppa: bool = True):
+        """
+        Run the complete point pattern analysis process.
 
+        Args:
+            refresh_users_ppa (bool): Whether to refresh user PPA data.
+
+        Returns:
+            None
+        """
         if refresh_users_ppa:
             self.get_users_ppa(method="dbscan")
 
@@ -461,14 +489,20 @@ class QueryEngine:
 
 
 class DimReduction:
+    """
+    A class for performing dimensionality reduction on data.
+
+    This class provides methods for screening features and performing
+    dimensionality reduction using UMAP or t-SNE.
+    """
 
     def __init__(
         self,
         df: pd.DataFrame,
         metric: str = "euclidean",
-        n_neighbors: list = [30],
+        n_neighbors: Union[int, List[int]] = [30],
         n_components: int = 2,
-        feature_transformers: dict = (
+        feature_transformers: Dict[str, Optional[Callable]] = (
             {
                 "raw": None,
             },
@@ -476,7 +510,18 @@ class DimReduction:
         is_dimred: bool = True,
         random_state: Optional[int] = None,
     ) -> None:
+        """
+        Initialize the DimReduction object.
 
+        Args:
+            df (pd.DataFrame): The input dataframe.
+            metric (str): The distance metric to use.
+            n_neighbors (Union[int, List[int]]): The number of neighbors to consider.
+            n_components (int): The number of dimensions to reduce to.
+            feature_transformers (Dict[str, Optional[Callable]]): A dictionary of feature transformers.
+            is_dimred (bool): Whether to perform dimensionality reduction.
+            random_state (Optional[int]): Random state for reproducibility.
+        """
         self.df = df
         self.metric = metric
         self.n_neighbors = n_neighbors
@@ -487,8 +532,18 @@ class DimReduction:
 
     def screening(
         self, feature_cols: List[str], model_type: Literal["umap", "tsne"] = "umap"
-    ):
+    ) -> Dict[str, Tuple[np.ndarray, Optional[np.ndarray], Optional[pd.DataFrame]]]:
+        """
+        Perform feature screening and dimensionality reduction.
 
+        Args:
+            feature_cols (List[str]): List of feature column names.
+            model_type (Literal["umap", "tsne"]): The type of dimensionality reduction model to use.
+
+        Returns:
+            Dict[str, Tuple[np.ndarray, Optional[np.ndarray], Optional[pd.DataFrame]]]:
+                A dictionary containing the results of the screening process.
+        """
         dimred = {}
         for name, ft in self.feature_transformers.items():
             if (self.metric == "gower") & (name != "raw"):
@@ -513,7 +568,6 @@ class DimReduction:
                 Xft_dist = None
 
             if self.is_dimred:
-
                 df_ft = pd.DataFrame(Xft_dist, index=self.df.index)
                 Xft_dimred = self.dim_reduction(
                     df_ft,
@@ -523,17 +577,25 @@ class DimReduction:
                 )
                 dimred[name] = (Xft, Xft_dist, Xft_dimred)
             else:
-                dimred[name] = (Xft, Xft_dist)
+                dimred[name] = (Xft, Xft_dist, None)
 
-            return dimred
+        return dimred
 
     def _model(
         self,
         model_type: Literal["umap", "tsne"],
         n_neighbors: int,
     ) -> Union[UMAP, TSNE]:
-        """Instantiate dimensional reduction model with default parameters"""
+        """
+        Instantiate dimensional reduction model with default parameters.
 
+        Args:
+            model_type (Literal["umap", "tsne"]): The type of model to instantiate.
+            n_neighbors (int): The number of neighbors to consider.
+
+        Returns:
+            Union[UMAP, TSNE]: An instance of the specified model.
+        """
         match model_type:
             case "umap":
                 return UMAP(
@@ -560,8 +622,19 @@ class DimReduction:
         supervised: bool = False,
         point_size: float = 0.1,
     ) -> pd.DataFrame:
-        """Perform feature dimensional reduction with UMAP and display the results"""
+        """
+        Perform feature dimensional reduction and display the results.
 
+        Args:
+            df (pd.DataFrame): The input dataframe.
+            labels (pd.Series): The labels for each data point.
+            model_type (Literal["umap", "tsne"]): The type of dimensionality reduction to perform.
+            supervised (bool): Whether to perform supervised dimensionality reduction.
+            point_size (float): The size of points in the plot.
+
+        Returns:
+            pd.DataFrame: The reduced dimensional data.
+        """
         if isinstance(self.n_neighbors, int):
             n_neighbors = [self.n_neighbors]
         else:
@@ -583,6 +656,24 @@ class DimReduction:
 
         df_dimred = pd.concat(dimred, axis=0)
 
+        self._plot_dim_reduction(df_dimred, n_neighbors, point_size)
+
+        return df_dimred
+
+    def _plot_dim_reduction(
+        self, df_dimred: pd.DataFrame, n_neighbors: List[int], point_size: float
+    ) -> None:
+        """
+        Plot the results of dimensionality reduction.
+
+        Args:
+            df_dimred (pd.DataFrame): The reduced dimensional data.
+            n_neighbors (List[int]): The list of neighbor values used.
+            point_size (float): The size of points in the plot.
+
+        Returns:
+            None
+        """
         if self.n_components == 2:
             if len(n_neighbors) > 1:
                 p = sns.relplot(
@@ -592,7 +683,7 @@ class DimReduction:
                     col="neighbors",
                     col_wrap=2,
                     hue="label",
-                    hue_order=sorted(labels.unique()),
+                    hue_order=sorted(df_dimred["label"].unique()),
                     kind="scatter",
                     palette=PALETTE,
                     facet_kws={"sharex": False, "sharey": False},
@@ -604,7 +695,7 @@ class DimReduction:
                     x="Dim1",
                     y="Dim2",
                     hue="label",
-                    hue_order=sorted(labels.unique()),
+                    hue_order=sorted(df_dimred["label"].unique()),
                     palette=PALETTE,
                     s=point_size,
                 )
@@ -613,7 +704,7 @@ class DimReduction:
                 p = sns.pairplot(
                     df_dimred.query(f"neighbors == {n}").drop("neighbors", axis=1),
                     hue="label",
-                    hue_order=sorted(labels.unique()),
+                    hue_order=sorted(df_dimred["label"].unique()),
                     palette=PALETTE,
                     aspect=2,
                     s=point_size,
@@ -625,24 +716,41 @@ class DimReduction:
             )
         p.figure.set_size_inches(1.5 * WIDTH_FIG_FULLPAGE, 1.5 * WIDTH_FIG_FULLPAGE)
         plt.show()
-        return df_dimred
 
 
 class Viz:
+    """
+    A class for creating various visualizations related to user statistics and data analysis.
+    """
 
     def __init__(self, config: ConfigParser):
-        # Connect to the tables and query
+        """
+        Initialize the Viz object.
 
+        Args:
+            config (ConfigParser): Configuration object containing paths and settings.
+        """
         self.config = config
 
+    @staticmethod
     def users_stats(
         df: pd.DataFrame,
-        order_col: Optional[list] = None,
+        order_col: Optional[List[str]] = None,
         ticker_moltip: Optional[int] = None,
-        colors: Optional[list] = None,
+        colors: Optional[List[str]] = None,
     ) -> None:
-        """Display report counts given the classification labels."""
+        """
+        Display report counts given the classification labels.
 
+        Args:
+            df (pd.DataFrame): DataFrame containing user statistics.
+            order_col (Optional[List[str]]): List of column names to order the data.
+            ticker_moltip (Optional[int]): Multiple for x-axis tick locator.
+            colors (Optional[List[str]]): List of colors for the bars.
+
+        Returns:
+            None
+        """
         fig = plt.figure()
         fig.set_size_inches(WIDTH_FIG_FULLPAGE, 8 * CM)
         ax1 = fig.gca()
@@ -691,15 +799,28 @@ class Viz:
     def level_users_stats(
         self,
         df: pd.DataFrame,
-        level: int,
+        level: Literal[1, 2, 3],
         ticker_moltip: Optional[int] = None,
         stacked: bool = True,
         is_palette: bool = True,
         save_data: bool = False,
         title: str = "Total",
     ) -> None:
-        """Display report counts given the classification labels for different levels of depth."""
+        """
+        Display report counts given the classification labels for different levels of depth.
 
+        Args:
+            df (pd.DataFrame): DataFrame containing user statistics.
+            level (Literal[1, 2, 3]): The level of depth for classification.
+            ticker_moltip (Optional[int]): Multiple for x-axis tick locator.
+            stacked (bool): Whether to create stacked bar plots.
+            is_palette (bool): Whether to use a color palette or predefined colors.
+            save_data (bool): Whether to save the plotted data.
+            title (str): Title for the saved data file.
+
+        Returns:
+            None
+        """
         if stacked:
             width = 1
         else:
@@ -859,11 +980,21 @@ class Viz:
                 )
             )
 
+    @staticmethod
     def labels_boxplot(
-        users_stats_filt: pd.DataFrame, unsupervised_labels: np.array, title: str
+        users_stats_filt: pd.DataFrame, unsupervised_labels: np.ndarray, title: str
     ) -> None:
-        """Distribution of feature values against cluster classes"""
+        """
+        Display distribution of feature values against cluster classes.
 
+        Args:
+            users_stats_filt (pd.DataFrame): Filtered DataFrame of user statistics.
+            unsupervised_labels (np.ndarray): Array of unsupervised cluster labels.
+            title (str): Title for the plot.
+
+        Returns:
+            None
+        """
         fig, ax = plt.subplots(2, 1, sharex=True)
 
         for i, c in enumerate(["log_std_utm", "quality"]):
@@ -880,7 +1011,18 @@ class Viz:
         ax[1].legend().set_visible(False)
         fig.set_size_inches(WIDTH_FIG_HALFPAGE, 8 * CM)
 
+    @staticmethod
     def dimred_scatterplot(X: pd.DataFrame, hue: str) -> None:
+        """
+        Create a scatter plot of dimensionality reduction results.
+
+        Args:
+            X (pd.DataFrame): DataFrame containing dimensionality reduction results.
+            hue (str): Column name to use for point colors.
+
+        Returns:
+            None
+        """
         p = sns.scatterplot(data=X, x="Dim1", y="Dim2", hue=hue, palette=PALETTE, s=8)
         p.figure.set_size_inches(WIDTH_FIG_HALFPAGE, 8 * CM)
 
@@ -889,7 +1031,16 @@ class Viz:
         users_stats: pd.DataFrame,
         metric: Literal["quality", "accuracy", "adjusted accuracy"] = "quality",
     ) -> None:
+        """
+        Display histograms of user quality metrics.
 
+        Args:
+            users_stats (pd.DataFrame): DataFrame containing user statistics.
+            metric (Literal["quality", "accuracy", "adjusted accuracy"]): The metric to visualize.
+
+        Returns:
+            None
+        """
         fig, ax = plt.subplots(1, 2, sharex=True)
         fig.set_size_inches(WIDTH_FIG_FULLPAGE, 6 * CM)
 
@@ -911,8 +1062,21 @@ class Viz:
         retention_interval: List[str] = ["1 year", "6 months", "3 months", "1 months"],
         entity: str = "Total",
         start_date: Optional[str] = None,
-        colors: Optional[str] = None,
-    ):
+        colors: Optional[List[str]] = None,
+    ) -> None:
+        """
+        Plot active users percentage over time.
+
+        Args:
+            qe (QueryEngine): QueryEngine object for data retrieval.
+            retention_interval (List[str]): List of retention intervals to plot.
+            entity (str): Entity to filter the data.
+            start_date (Optional[str]): Start date for the plot.
+            colors (Optional[List[str]]): List of colors for the lines.
+
+        Returns:
+            None
+        """
         fig = plt.figure()
         fig.set_size_inches(WIDTH_FIG_HALFPAGE, 6 * CM)
         ax = fig.gca()
@@ -939,9 +1103,21 @@ class Viz:
         entities: List[str],
         freq: str = "month",
         start_date: Optional[str] = None,
-        colors: Optional[str] = None,
-    ):
+        colors: Optional[List[str]] = None,
+    ) -> None:
+        """
+        Plot user retention percentage over time.
 
+        Args:
+            qe (QueryEngine): QueryEngine object for data retrieval.
+            entities (List[str]): List of entities to plot.
+            freq (str): Frequency of the data (e.g., "month", "week").
+            start_date (Optional[str]): Start date for the plot.
+            colors (Optional[List[str]]): List of colors for the lines.
+
+        Returns:
+            None
+        """
         fig = plt.figure()
         fig.set_size_inches(WIDTH_FIG_HALFPAGE, 6 * CM)
         ax = fig.gca()
@@ -961,9 +1137,58 @@ class Viz:
             df.plot(ax=ax, rot=30)
         ax.set_ylabel("User Retention (%)")
 
+    @staticmethod
+    def mlm_results(data: pd.DataFrame, results: Any, covariates: List[str]) -> None:
+        """
+        Analyze the results of the mixed-effects model.
+
+        This function creates visualizations for each covariate, including scatter plots
+        with regression lines. It also prints the model coefficients and their p-values.
+
+        Args:
+            data (pd.DataFrame): The dataset used in the analysis.
+            results (Any): The results of the mixed-effects model.
+            covariates (List[str]): List of covariate names used in the model.
+
+        Returns:
+            None
+        """
+        # Create a figure with subplots for each covariate
+        fig = plt.figure()
+        fig.set_size_inches(WIDTH_FIG_FULLPAGE, 8 * CM * len(covariates))
+
+        for i, covariate in enumerate(covariates):
+            ax = fig.add_subplot(len(covariates), 1, i + 1)
+
+            # Scatterplot with regression line
+            sns.scatterplot(
+                data=data, x="time_since_campaign", y=covariate, hue="country", ax=ax
+            )
+            sns.regplot(
+                data=data,
+                x="time_since_campaign",
+                y=covariate,
+                scatter=False,
+                color=LINE_COLOR,
+                ax=ax,
+            )
+            ax.set_title(f"{covariate} vs Time Since Campaign")
+            ax.set_xlabel("Time Since Campaign (Months)")
+            ax.set_ylabel(f"{covariate} (%)")
+            ax.legend(title="Country")
+
+        plt.tight_layout()
+        plt.show()
+
+        # Print coefficients and their p-values
+        print("Model Results:")
+        for coef, p_val in zip(results.params.index, results.pvalues):
+            print(
+                f"{coef}: Coefficient = {results.params[coef]:.4f}, p-value = {p_val:.4f}"
+            )
+
 
 def users_competence(config: ConfigParser) -> Tuple[pd.DataFrame, float, pd.DataFrame]:
-
     reports = pd.read_parquet(config["paths"]["reports_transf"]).set_index(
         "version_uuid"
     )

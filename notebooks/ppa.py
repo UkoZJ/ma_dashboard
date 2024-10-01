@@ -10,16 +10,18 @@ import pandas as pd
 from scipy.stats import hmean
 from sklearn.cluster import AgglomerativeClustering, SpectralClustering
 from sklearn.preprocessing import MinMaxScaler, Normalizer
+from statsmodels.formula.api import mixedlm
 
 root_dir = Path(os.getcwd()).parent
 config_path = root_dir.joinpath("config/")
 sys.path.append(str(root_dir))
 
-from src import ppa, query_engine
+from src.models import ppa
+from src import query_engine
 from src.utils import get_config, get_config_filenames
 
-%load_ext autoreload
-%autoreload 2
+# %load_ext autoreload
+# %autoreload 2
 
 # Get configuration parameters and logger for the current session
 config = get_config(path=config_path)
@@ -324,7 +326,81 @@ viz.user_retention(qe, entities, freq="quarter", start_date=START_DATE, colors=c
 
 retention_interval = ["1 year", "6 months", "3 months", "1 months"]
 for entity in entities:
-    viz.active_users(qe, retention_interval, entity=entity, start_date=START_DATE, colors=colors)
+    viz.active_users(
+        qe, retention_interval, entity=entity, start_date=START_DATE, colors=colors
+    )
+
+# %%
+# ## Mixed Linear Model Analysis for Communication Campaign Impact
+
+# Define campaign dates for each entity (can be manually set)
+campaign_dates = {"Spain": "2023-06-23", "Netherlands": "2021-06-01"}
+start_date = "2021-01-01"
+# Define the covariates preprocessing method ("percentages" or "raw")
+transf = "percentage"
+
+# Compute covariates
+df_all = pd.DataFrame()
+for entity in campaign_dates.keys():
+    df = qe.ppa_view_inflow(users_stats, "custom_labels_2", entity=entity, freq="month")
+    if transf == "percentage":
+        df_transf = (df.div(df.sum(axis=1), axis=0) * 100).fillna(0)
+    elif transf == "raw":
+        df_transf = df.fillna(0)
+    else:
+        KeyError()
+    df_transf.index = pd.to_datetime(df_transf.index)
+    df_transf["country"] = entity
+    df_transf.index.name = "date"
+
+    # Calculate time since campaign in months
+    campaign_date = pd.Timestamp(campaign_dates[entity])
+    df_transf["time_since_campaign"] = (
+        (
+            df_transf.index.to_period("M").to_timestamp()
+            - campaign_date.to_period("M").to_timestamp()
+        )
+        / np.timedelta64(30, "D")
+    ).astype(int)
+
+    # Adjust for dates before the campaign
+    # df_transf.loc[df_transf.index < campaign_date, 'time_since_campaign'] = 0
+
+    df_all = pd.concat([df_all, df_transf], axis=0)
+
+df_all = df_all.reset_index(drop=False)
+df_all = df_all.query(f"date >= '{start_date}'")
+
+df_all["HQ-users"] = df_all[["HQ-clustered", "HQ-multi-clustered", "HQ-sparse"]].sum(
+    axis=1
+)
+df_all["LQ-users"] = df_all[["LQ-clustered", "LQ-multi-clustered", "LQ-sparse"]].sum(
+    axis=1
+)
+
+data = df_all[["time_since_campaign", "country"]]
+if transf == "percentage":
+    data[["HQ-users", "LQ-users", "sporadic"]] = df_all[
+        ["HQ-users", "LQ-users", "sporadic"]
+    ]
+    formula = "time_since_campaign ~ HQ_users + sporadic"
+elif transf == "raw":
+    data["sporadic"] = df_all["sporadic"] / df_all.drop(
+        ["date", "country", "time_since_campaign"], axis=1
+    ).sum(axis=1)
+    data["LQ2HQ-users"] = df_all["LQ-users"] / df_all[["LQ-users", "HQ-users"]].sum(
+        axis=1
+    )
+    formula = "time_since_campaign ~ LQ2HQ_users + sporadic"
+else:
+    KeyError()
+
+data.columns = [name.replace("-", "_") for name in data.columns]
+
+covariates = [term.strip() for term in formula.split("~")[1].split("+")]
+results = mixedlm(formula, data=data, groups="country", missing="drop").fit()
+
+viz.mlm_results(data, results, covariates)
 
 # %% [markdown]
 # ## Unsupervised profiling of users
@@ -455,9 +531,7 @@ viz.dimred_scatterplot(Xft_dimred, cluster_labels)
 # As before, after visual interpretation, we provide the correspondence between
 # agglomerative clusters and user labels.
 
-viz.labels_boxplot(
-    users_stats_filt, cluster_labels, title="Raw data clustering Labels"
-)
+viz.labels_boxplot(users_stats_filt, cluster_labels, title="Raw data clustering Labels")
 cluster_labels_map = {
     "without_cs_acc": {
         2: "?",
@@ -547,3 +621,4 @@ viz.users_stats(
     users_stats_view.loc[START_DATE:, :], order_col_, ticker_moltip=6, colors=color
 )
 
+# %%

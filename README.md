@@ -78,3 +78,17 @@ In order to access the dashboard, it is necessary to register the users and thei
 ### Data
 
 `Data` folder is available on the Google Drive of `mosquitoalert2share@gmail.com` with link `https://drive.google.com/drive/u/1/folders/16kg55tSuqSrNxNaSMeYjeSIllB7M0IMK` and path 'My Drive > Private > ma_dashboard > `data.zip`.
+
+### Relevant Notebooks
+
+## Mosquito Suitability
+
+Worldwide mosquito suitability metrics are computed in the `mosquito_suitability.py` notebook. MA report density and mosquito suitability are joined in a composed index in order to assess the most relevant cell-region to sample from by CS reporting. Moreover, re-gridding on discrete global grids is investigated. The project is its early prototyping stage and further development is needed for production.
+
+## Understanding Participation Patterns: Classifying MA-User Behavior
+
+The `ppa.py` notebook is related to PhD chapter and paper of Ayat Abourashed. 
+
+## Gravity Model input datasets
+
+The `io_gravity_model.py` notebook provides input data for a gravity model developed at UAB by Dr. Daniel Campos Moreno.

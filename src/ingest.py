@@ -48,24 +48,23 @@ def open_conn(
         encoded_password = quote_plus(password)
         return f"postgresql://{user}:{encoded_password}@{host}:{port}/{dbname}"
 
-    def set_postgres_env(uri:str):
+    def set_postgres_env(uri: str):
         """Setup postgres environment variables to start a DuckDB connection"""
 
         parsed = urlparse(uri)
         env_vars = {
-            'PGUSER': parsed.username,
-            'PGPASSWORD': parsed.password,
-            'PGHOST': parsed.hostname,
-            'PGPORT': str(parsed.port),
-            'PGDATABASE': parsed.path[1:]
+            "PGUSER": parsed.username,
+            "PGPASSWORD": parsed.password,
+            "PGHOST": parsed.hostname,
+            "PGPORT": str(parsed.port),
+            "PGDATABASE": parsed.path[1:],
         }
         os.environ.update(env_vars)
         export_commands = [f"export {key}={value}" for key, value in env_vars.items()]
         command_string = "; ".join(export_commands)
         subprocess.run(command_string, shell=True, executable="/bin/bash")
 
-    def create_engine_conn(
-        uri: str, engine_type: str, is_env:bool=True) -> Any:
+    def create_engine_conn(uri: str, engine_type: str, is_env: bool = True) -> Any:
         if engine_type == "sqlalchemy":
             return create_engine(uri, echo=False, hide_parameters=True)
         elif engine_type == "duckdb":
@@ -185,7 +184,9 @@ class Ingest:
         """
 
         # Open connection with postgres
-        engine, server = open_conn(self.config, conn_type, sql_engine, logger=self.logger)
+        engine, server = open_conn(
+            self.config, conn_type, sql_engine, logger=self.logger
+        )
         is_prql = self.config.getboolean("params", "is_prql")
         try:
             # Get all the tables relative to their query

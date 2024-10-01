@@ -1,16 +1,14 @@
-import os
-from concurrent.futures import ProcessPoolExecutor
-from typing import Literal, Optional
+from typing import Optional
 
 import geopandas as gpd
 import numpy as np
 import xarray as xr
+import rioxarray
 from affine import Affine
 from geopandas.tools import sjoin
-from pyproj import Geod
 from rasterio import features
 from scipy import interpolate
-from shapely.geometry import MultiLineString, Point, Polygon
+from shapely.geometry import Polygon
 
 
 def mask_from_vect(vect_path, ref_path, set_value: int = 1):

@@ -1,9 +1,25 @@
-# %%
+# %% Imports
+import geopandas as gpd
+import h3
+import h3.api.numpy_int
+import h3.unstable.vect
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import shapely
+import xarray as xr
+import xesmf as xe
+import xvec
+
+import utility as ut
+from utility import mask_from_vect
+
+# %load_ext autoreload
+# %autoreload 2
 
 
-# Main functional forms
+# %% Main functional forms
 def Briere_func(cte, tmin, tmax, temp):
     outp = temp * cte * (temp - tmin) * (tmax - temp) ** 0.5
     return max(outp, 0) if not np.isnan(outp) else 0
@@ -81,7 +97,7 @@ def R0_func(species, Te, rain, hum):
     return R0
 
 
-# Example usage of R0_func
+# %% Example usage of R0_func
 
 # Define temperature, rainfall, and human density
 temperature = 25  # degrees Celsius
@@ -96,10 +112,8 @@ print(f"Suitability index for Aedes albopictus: {R0_albopictus}")
 R0_aegypti = R0_func("aegypti", temperature, rainfall, human_density)
 print(f"Suitability index for Aedes aegypti: {R0_aegypti}")
 
-# %%
 
-
-# Sigmoid function
+# %% Sigmoid function
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
@@ -132,26 +146,17 @@ plt.ylabel("RD")
 plt.title("Smooth Decision Index P")
 plt.show()
 
-# %%
-
-import h3
-import h3.api.numpy_int
-import h3.unstable.vect
-import numpy as np
-import xarray as xr
-
-# %%
+# %% Load and process data
 ds = xr.load_dataset("../data/01_raw/era5/temperature_2m_t_2023.nc")
 lon_ds = ds.coords["longitude"].values
 lat_ds = ds.coords["latitude"].values
 mask = xr.load_dataset("../data/01_raw/era5/mask_land.nc")
 mask.coords["longitude"] = mask.coords["longitude"].values - 180
-# %%
-# ds.t2m[0].plot()
 
+# %% Plot masked temperature
 (mask.mask_land * ds.t2m[0]).plot()
 
-# %%
+# %% H3 indexing
 resolution = 3
 
 lon, lat = xr.broadcast(ds.longitude, ds.latitude)
@@ -160,17 +165,17 @@ index = h3.unstable.vect.geo_to_h3(lat.data.ravel(), lon.data.ravel(), resolutio
 index.shape = lon.shape
 
 len(np.unique(index)) / lon.size
-# %%
+
+# %% Add H3 index to dataset
 ds.coords["index"] = ("latitude", "longitude"), index.transpose()
 ds
-# %%
+
+# %% Plot H3 index
 ds.index.plot()
-# %%
+
+# %% Define bounding box
 lon_min, lon_max = ds.longitude.min().values.item(), ds.longitude.max().values.item()
 lat_min, lat_max = ds.latitude.min().values.item(), ds.latitude.max().values.item()
-
-# %%
-import shapely
 
 bbox_coords = [
     (lon_min - 180, lat_min),
@@ -180,53 +185,28 @@ bbox_coords = [
     (lon_min - 180, lat_min),
 ]
 bbox = shapely.Polygon(bbox_coords)
-bbox
-# %%
-bbox_coords
-# %%
-geo = {
-    "type": "Polygon",
-    "coordinates": [
-        [
-            (lon_min, lat_min),
-            (lon_min, lat_max),
-            (lon_max, lat_max),
-            (lon_max, lat_min),
-            (lon_min, lat_min),
-        ]
-    ],
-}
-idx = h3.polyfill(geo, resolution, geo_json_conformant=False)
-ll_points = np.array([h3.h3_to_geo(i) for i in idx])
-ll_points_lon_first = ll_points[:, ::-1]
-ll_points_lon_first
-# %%
-# h3 wants lat first
+
+# %% H3 polyfill
 bbox_coords_lat_first = [(lat, lon) for lon, lat in bbox_coords]
 bbox_indexes = np.array(
     list(h3.api.basic_int.polyfill_polygon(bbox_coords_lat_first, resolution))
 )
-bbox_indexes.shape
-# %%
+
 ll_points = np.array([h3.api.numpy_int.h3_to_geo(i) for i in bbox_indexes])
 ll_points_lon_first = ll_points[:, ::-1]
-# %%
+
+# %% Interpolate data to H3 grid
 coords = {"cell": bbox_indexes}
 
-# remember to re-add the 360 degree offset
 dsi = ds.interp(
     longitude=xr.DataArray(ll_points_lon_first[:, 0], dims="cell", coords=coords),
     latitude=xr.DataArray(ll_points_lon_first[:, 1], dims="cell", coords=coords),
 )
-dsi
-# %%
+
 dsi2 = dsi.drop_vars(["longitude", "latitude", "index"])
 dsi2.cell.attrs = {"grid_name": "h3", "resolution": resolution}
-dsi2
 
-# %%
-import matplotlib.pyplot as plt
-
+# %% Plot interpolated data
 ds.t2m[0].plot()
 plt.scatter(
     ll_points_lon_first[:, 0] - 180,
@@ -235,12 +215,7 @@ plt.scatter(
     edgecolor="black",
 )
 
-# %%
-import numpy as np
-import xarray as xr
-import xesmf as xe
-
-# Open the dataset
+# %% Regrid data
 ds = xr.open_dataset("../data/01_raw/era5/temperature_2m_p01_t_2023.nc")
 
 ds_target_grid = xr.Dataset(
@@ -251,48 +226,20 @@ ds_target_grid = xr.Dataset(
 )
 
 regridder = xe.Regridder(ds, ds_target_grid, "nearest_s2d", periodic=True)
-# regridder = xe.Regridder(ds, ds_target_grid, "conservative")
-# regridder.to_netcdf("regridder_p001_to_p025_nearest_s2d.nc")
 ds_regridded = regridder(ds["t2m"], keep_attrs=True)
 
-# %%
+# %% Compare regridded data
 ds_p25 = xr.open_dataset("../data/01_raw/era5/temperature_2m_t_2023.nc")
 (ds_p25.isel(time=0)["t2m"] - ds_regridded.isel(time=0)).plot()
 
-# %%
-from utility import mask_from_vect
-
+# %% Create land-sea mask
 mask_da = mask_from_vect(
     vect_path="/home/uko/Dev/research_datasets/costline/costline_buffer.gpkg",
     ref_path="../data/01_raw/era5/temperature_2m_t_2023.nc",
 )
 mask_da.to_netcdf("./data/land_sea_mask.nc")
 
-# %%
-from utility import interpolate_mask
-
-# Load your xarray dataset
-ds = xr.open_dataset("path_to_your_dataset.nc")
-
-# Assuming your variable of interest is named 'variable'
-interpolated_da = interpolate_mask(ds["variable"], buffer_size=5)
-
-# Replace the original variable with the interpolated one
-ds["variable"] = interpolated_da
-
-# Save the result
-ds.to_netcdf("path_to_output.nc")
-
-# %%
-
-import utility as ut
-import xarray as xr
-import geopandas as gpd
-import pandas as pd
-
-%load_ext autoreload
-%autoreload 2
-
+# %% Load and process data
 ds = xr.load_dataset("../data/01_raw/era5/temperature_2m_t_2023.nc")
 reports = pd.read_parquet("../data/02_intermediate/reports.parquet")
 land_mask = gpd.GeoDataFrame(
@@ -301,16 +248,11 @@ land_mask = gpd.GeoDataFrame(
 )
 regs = gpd.read_file("../data/01_raw/costline/ne_50m_coastline.json")
 
-# %%
+# %% Create grid and count points
 cell_size = 0.1
 land_mask_buffer = gpd.GeoDataFrame(
     geometry=land_mask.to_crs("epsg:3857").buffer(distance=cell_size / 2).to_crs(4326)
 )
-# grid = ut.make_grid(
-#     cell_size=cell_size,
-#     save_grid="../data/01_raw/era5/grid.parquet",
-#     vec_mask=land_mask_buffer,
-# )
 
 grid = gpd.read_parquet("../data/01_raw/era5/grid.parquet")
 
@@ -318,10 +260,7 @@ points_ct = ut.count_points_on_grid(reports[["lat", "lon"]], grid)
 grid["point_ct"] = points_ct
 grid["point_density"] = grid["point_ct"] / (grid["area"] / 1e6)
 
-# %%
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-
+# %% Plot point density
 fig, ax = plt.subplots()
 grid.cx[-10:5, 35:45].plot(
     column="point_density",
@@ -336,9 +275,11 @@ land_mask_buffer.plot(edgecolor="gray", facecolor="none", ax=ax)
 ax.set_ylim(35, 45)
 ax.set_xlim(-10, 5)
 
-# %%
-import xvec
+# %% Extract points from dataset
 gs = gpd.GeoSeries(grid["centroids"], crs=4326)
 extracted = ds.xvec.extract_points(gs, x_coords="longitude", y_coords="latitude")
 gdf = extracted["t2m"].isel(time=0).xvec.to_geodataframe()
+
+# %%
+gdf
 # %%
