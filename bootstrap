@@ -1,9 +1,8 @@
 # Bootstrap Makefile
-
-REPO_URL_MA := git@github.com:Mosquito-Alert/ma_dashboard.git
-REPO_DEST := $(CURDIR)/ma_dashboard
+PROJECT_NAME := ma_dashboard
 GDRIVE_FOLDER_ID := 16kg55tSuqSrNxNaSMeYjeSIllB7M0IMK
-
+REPO_URL_MA := git@github.com:Mosquito-Alert/$(PROJECT_NAME).git
+REPO_DEST := $(CURDIR)/$(PROJECT_NAME)
 
 .PHONY: setup install-deps clone-repo run-setup
 

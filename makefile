@@ -1,13 +1,14 @@
 SHELL := /bin/bash
 
 # Variables
+PROJECT_NAME := ma_dashboard
 SECRETS_DIR := .secrets
 SOPS_AGE_KEY_FILE := $(shell pwd)/$(SECRETS_DIR)/age-key.txt
 SECRET_CONFIG_FILES := $(shell find . -type f \( -name '.*.ini' -o -name '.*.json' \) ! -name '.config.session.ini')
 ENCRYPTED_CONFIG_FILES := $(shell find . -type f \( -name '.*.ini.enc' -o -name '.*.json.enc' \))
 
-REPO_URL_MA := git@github.com:Mosquito-Alert/ma_dashboard.git
-REPO_URL_UkoZJ := git@github.com:UkoZJ/ma_dashboard.git
+REPO_URL_MA := git@github.com:Mosquito-Alert/$(PROJECT_NAME).git
+REPO_URL_UkoZJ := git@github.com:UkoZJ/$(PROJECT_NAME).git
 
 REPO_DEST := $(CURDIR)
 REPO_FOLDER := $(notdir $(CURDIR))
