@@ -1,7 +1,8 @@
 # Bootstrap Makefile
 
-REPO_URL_MA := https://github.com/Mosquito-Alert/ma_dashboard.git
+REPO_URL_MA := git@github.com:Mosquito-Alert/ma_dashboard.git
 REPO_DEST := $(CURDIR)/ma_dashboard
+GDRIVE_FOLDER_ID := 16kg55tSuqSrNxNaSMeYjeSIllB7M0IMK
 
 
 .PHONY: setup install-deps clone-repo run-setup
@@ -10,23 +11,27 @@ setup: install-deps clone-repo run-setup
 
 install-deps:
 	@echo "Installing dependencies..."
-	@if ! command -v git > /dev/null; then \
-		echo "git not found. Installing git..."; \
-		sudo apt-get update && sudo apt-get install -y git || \
-		(echo "Unable to install git. Please install manually."; exit 1); \
-	fi
-	@if ! command -v git-lfs > /dev/null; then \
-		echo "git-lfs not found. Installing git-lfs..."; \
-		sudo apt-get update && sudo apt-get install -y git-lfs || \
-		(echo "Unable to install git-lfs. Please install manually."; exit 1); \
-	fi
-	@git lfs install
+	@sudo apt-get update -y -qq > /dev/null 2>&1
+	@sudo apt-get install -y git p7zip rclone
 
 clone-repo: 
 	@echo "Cloning repository..."
 	@git lfs clone $(REPO_URL_MA) $(REPO_DEST) || (echo "Failed to clone repository"; exit 1)
+	@echo "✅ $(REPO_URL_MA) cloned successfully in $(REPO_DEST)"
 
+get-repo-folders:
+	@echo "Downloading large-storage folders from GDrive..."
+	@if [ ! -f ~/.config/rclone/rclone.conf ]; then \
+		@rclone config; \
+	fi
+	@rclone copy mosquitoalert2share: $(REPO_DEST) --drive-root-folder-id=$(GDRIVE_FOLDER_ID) || ( \
+		echo "❌ Failed to copy from GDrive. Please check your token or reconfigure rclone."; \
+		exit 1; \
+	)
+	@echo "🔑 Secrets are encrypted and password is need to uncompress..."
+	@7z x '$(REPO_DEST)/*.zip' -o$(REPO_DEST) -y && find $(REPO_DEST) -type f -name "*.zip" -exec rm {} +
+	@echo "✅ Large folders created successfully"
 
 run-setup: 
 	@echo "Running setup from the cloned repository..."
-	@cd $(REPO_DEST) && make setup || (echo "Failed to run setup"; exit 1)
+	@cd $(REPO_DEST) && make setup @echo || (echo "❌ Failed to run setup"; exit 1)

@@ -1,0 +1,3 @@
+creation_rules:
+  - path_regex: .*\.(ini|json)
+    age: age1yqxeyrj6xmdcuawefqmuxernjjkfpmk70hwcrw2g4mpv6x5a330qrkjppx

@@ -1,0 +1,11 @@
+__pycache__
+.pytest_cache
+.ipynb_checkpoints
+.vscode
+.DS_Store
+# Private data
+.credentials.*
+.config.*
+!*.enc
+age-key.txt
+.envs
