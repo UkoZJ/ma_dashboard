@@ -12,10 +12,9 @@ micromamba activate "$VENV_PATH"
 # pip install -r requirements.txt
 
 # Set options for the panel server
-export OPTS="$OPTS --allow-websocket-origin=*"
-export OPTS="$OPTS --warm"
-export OPTS="$OPTS --reuse-sessions"
-export OPTS="$OPTS --global-loading-spinner"
+# export OPTS="$OPTS --allow-websocket-origin=*"
+# export OPTS="$OPTS --warm"
+# export OPTS="$OPTS --global-loading-spinner"
 export OPTS="$OPTS --port 5006"
 
 # Enable options for authentication if needed
@@ -25,4 +24,4 @@ export OPTS="$OPTS --port 5006"
 # export OPTS="$OPTS --basic-login-template ./panel_apps/login.html"
 
 # Start the panel server with the specified options
-python -m panel serve $OPTS panel_apps/english.py
+python -m panel serve $OPTS panel_apps/english.py --show

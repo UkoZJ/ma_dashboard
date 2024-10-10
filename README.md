@@ -36,7 +36,7 @@ $ make -f bootstrap setup
 This command installs necessary dependencies (`git`, `micromamba`, etc.), clones the repository from GitHub and gets large-storage folders from GDrive. You will need to provide your GitHub credentials (username and API key) and login to your Google Account during this process. After cloning, the makefile sets up a virtual environment and decrypts secrets upon password input. Once completed, the application is ready to be launched.
 
 > [!NOTE] 
-> If the virtual environment creation is not successful, you may try with the `conda-lock.yaml` file instead of `env.yaml`.
+> Check if `env-lock.yaml` (default) or `env.yaml` is used to build the environment. Remember that `env.yaml` will get the most recent versions of libraries which may break the code. Remember to rebuild  the `env-lock.yaml` with `conda-lock -f env.yaml -p linux-64` in case new libraries are added or removed to `env.yaml`. Sometimes conda-lock is not able to create a lock file (runs forever) and a combination of `micromamba env export > env-export.yaml` and `pip freeze > requirements.txt` is used instead. 
 
 > [!NOTE]
 > GDrive of `mosquitoalert2share@gmail.com` with link `https://drive.google.com/drive/u/1/folders/16kg55tSuqSrNxNaSMeYjeSIllB7M0IMK` contains the following compressed and password protected project folders: `.secrets` and `data.zip`.

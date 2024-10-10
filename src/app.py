@@ -22,9 +22,9 @@ from src.utils import get_config
 HEADER_COLOR = "#EDB20C"
 COLOR_USERS = ["#505765", "#73c0de", "#3ba272"]
 COLOR_ECHARTS = [
-    "#fac858", # adults
-    "#ee6666", # bites
-    "#5470c6", # sites
+    "#fac858",  # adults
+    "#ee6666",  # bites
+    "#5470c6",  # sites
     "#91cc75",
     "#73c0de",
     "#3ba272",
@@ -58,7 +58,14 @@ class MosquitoAlertExplorer(param.Parameterized):
     ylabel_counts = _("Counts")
     ylabel_coverage = _("Coverage (%)")
     ylabel_retention = _("(%)")
-    overview_table_names = [_("Adult Species"), _("Mosquito Bites"), _("Breeding Sites"), _("Total Reports"), _("New Users"), _("Active Users")]
+    overview_table_names = [
+        _("Adult Species"),
+        _("Mosquito Bites"),
+        _("Breeding Sites"),
+        _("Total Reports"),
+        _("New Users"),
+        _("Active Users"),
+    ]
 
     docs_button_name = _("Definitions")
 
@@ -319,7 +326,7 @@ class MosquitoAlertExplorer(param.Parameterized):
                 title=f"{self.report_type}\n{self.scale}\n{self.entity}",
                 ylabel=self.ylabel_counts,
                 color=COLOR_ECHARTS,
-                is_sorted_cols=False
+                is_sorted_cols=False,
             ),
             responsive=True,
         )
@@ -352,7 +359,7 @@ class MosquitoAlertExplorer(param.Parameterized):
     def overview_plot_rank(self):
         df_reports = self.qe.overview_rank(scale=self.scale_dict[self.scale])
         df_user = self.qe.user_activity_rank(scale=self.scale_dict[self.scale])
-        df = pd.concat([df_reports, df_user],axis=1)
+        df = pd.concat([df_reports, df_user], axis=1)
         df.index.name = self.scale
         df.columns = self.overview_table_names
         df = df.infer_objects(copy=False).fillna(0)
@@ -402,7 +409,7 @@ class MosquitoAlertExplorer(param.Parameterized):
             scale=self.scale_dict[self.scale],
             entity=self.entity,
         )
-        df= df_pv[self.report_type_legend.keys()]
+        df = df_pv[self.report_type_legend.keys()]
         df = df.replace({np.nan: 0})
         # self.filt_raw_data = df
         self.filt_raw_data = df_pv  # without empty columns

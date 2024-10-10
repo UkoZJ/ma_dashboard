@@ -35,7 +35,7 @@ setup-env:
 		curl -L micro.mamba.pm/install.sh | bash || (echo "❌ Failed to install micromamba"; exit 1); \
 		echo "✅ Micromamba installed successfully"; \
 	fi
-	@cd $(REPO_DEST) && micromamba env create -f env.yaml -p $(ENV_DEST) -y || (echo "❌ Failed to create micromamba environment"; exit 1)
+	@cd $(REPO_DEST) && micromamba env create -f env-export.yaml -p $(ENV_DEST) -y || (echo "❌ Failed to create micromamba environment"; exit 1)
 	@echo "✅ Environment created successfully"
 
 setup-secrets:
@@ -138,14 +138,12 @@ serve_local:
 	$(PYTHON) -m panel serve panel_apps/english.py \
 	--allow-websocket-origin=* \
 	--warm \
-	--reuse-sessions \
 	--global-loading-spinner \
 	--port $(PORT)
 serve_local_access:
-	$(PYTHON) -m panel serve panel_apps/english.py \
+	$(PYTHON) -m panel serve panel_apps/english.py --dev \
 	--allow-websocket-origin=* \
 	--warm \
-	--reuse-sessions \
 	--global-loading-spinner \
 	--port $(PORT) \
 	--static-dirs assets=./assets \
