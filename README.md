@@ -1,21 +1,20 @@
-## Table of Contents
-
-- [Table of Contents](#table-of-contents)
-- [Mosquito Alert Data Visualization Dashboard](#mosquito-alert-data-visualization-dashboard)
-  - [Visualization Views](#visualization-views)
-  - [Interaction and Filters](#interaction-and-filters)
-- [Project Setup](#project-setup)
-- [GIT Setup](#git-setup)
-- [Application Setup](#application-setup)
-  - [Relevant Notebooks](#relevant-notebooks)
-- [Mosquito Suitability](#mosquito-suitability)
-- [Understanding Participation Patterns: Classifying MA-User Behavior](#understanding-participation-patterns-classifying-ma-user-behavior)
-- [Gravity Model input datasets](#gravity-model-input-datasets)
-
-## Mosquito Alert Data Visualization Dashboard
+# Mosquito Alert Data Visualization Dashboard
 
 This dashboard visualizes Mosquito Alert (MA) reports, monitoring performance, coverage, and user retention. The primary goal is to provide daily updated time-series data filtered by geographic, administrative, and bio-climatic areas.
 
+## Table of Contents
+
+- [Mosquito Alert Data Visualization Dashboard](#mosquito-alert-data-visualization-dashboard)
+  - [Table of Contents](#table-of-contents)
+    - [Visualization Views](#visualization-views)
+    - [Interaction and Filters](#interaction-and-filters)
+  - [Project Setup](#project-setup)
+  - [GIT Setup](#git-setup)
+  - [Application Setup](#application-setup)
+    - [Relevant Notebooks](#relevant-notebooks)
+  - [Mosquito Suitability](#mosquito-suitability)
+  - [Understanding Participation Patterns: Classifying MA-User Behavior](#understanding-participation-patterns-classifying-ma-user-behavior)
+  - [Gravity Model input datasets](#gravity-model-input-datasets)
 
 ### Visualization Views
 
