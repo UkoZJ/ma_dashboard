@@ -3,6 +3,7 @@ SHELL := /bin/bash
 # Variables
 PROJECT_NAME := ma_dashboard
 SECRETS_DIR := .secrets
+APP_LANGUAGE := english
 SOPS_AGE_KEY_FILE := $(shell pwd)/$(SECRETS_DIR)/age-key.txt
 SECRET_CONFIG_FILES := $(shell find . -type f \( -name '.*.ini' -o -name '.*.json' \) ! -name '.config.session.ini')
 ENCRYPTED_CONFIG_FILES := $(shell find . -type f \( -name '.*.ini.enc' -o -name '.*.json.enc' \))
@@ -136,13 +137,13 @@ git-push: encrypt ## Usage: make git-push message="Your commit message here"
 serve_remote:
 	make -j 2 serve_local ngrok
 serve_local: 
-	$(PYTHON) -m panel serve panel_apps/english.py \
+	$(PYTHON) -m panel serve panel_apps/$(APP_LANGUAGE).py \
 	--allow-websocket-origin=* \
 	--warm \
 	--global-loading-spinner \
 	--port $(PORT)
 serve_local_access:
-	$(PYTHON) -m panel serve panel_apps/english.py --dev \
+	$(PYTHON) -m panel serve panel_apps/$(APP_LANGUAGE).py --dev \
 	--allow-websocket-origin=* \
 	--warm \
 	--global-loading-spinner \
