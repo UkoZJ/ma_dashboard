@@ -17,7 +17,8 @@ ENV_NAME := $(REPO_FOLDER)_env
 ENV_DEST := $(REPO_DEST)/.envs/$(ENV_NAME)
 
 PORT := 5006
-PYTHON := $(ENV_DEST)/bin/python
+PYTHON := micromamba run -p $(ENV_DEST) python
+
 
 .PHONY: help setup-env setup-secrets encrypt decrypt decrypt-clean
 
@@ -137,13 +138,13 @@ git-push: encrypt ## Usage: make git-push message="Your commit message here"
 serve_remote:
 	make -j 2 serve_local ngrok
 serve_local: 
-	$(PYTHON) -m panel serve panel_apps/$(APP_LANGUAGE).py \
+	@$(PYTHON) -m panel serve panel_apps/$(APP_LANGUAGE).py \
 	--allow-websocket-origin=* \
 	--warm \
 	--global-loading-spinner \
 	--port $(PORT)
 serve_local_access:
-	$(PYTHON) -m panel serve panel_apps/$(APP_LANGUAGE).py --dev \
+	@$(PYTHON) -m panel serve panel_apps/$(APP_LANGUAGE).py --dev \
 	--allow-websocket-origin=* \
 	--warm \
 	--global-loading-spinner \
